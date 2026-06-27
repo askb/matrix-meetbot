@@ -12,7 +12,7 @@ name: live-demo
       meeting_name:
         description: "Meeting/path slug used for minutes"
         type: string
-        default: opendev-meeting
+        default: meetbot-poc
       duration_minutes:
         description: "How long to keep the demo alive (max ~350)"
         type: string
@@ -111,7 +111,10 @@ jobs:
       - name: Print join instructions
         run: |
           {
-            echo "## Matrix MeetBot — live demo is up"
+            echo "## MeetBot POC (unofficial) — live demo is up"
+            echo ""
+            echo "> Personal proof-of-concept. **Not** an OpenDev/OpenInfra service;"
+            echo "> throwaway homeserver, federation disabled. Destroyed when this job ends."
             echo ""
             echo "**Homeserver (paste into Element):** \`$TUNNEL_URL\`"
             echo ""

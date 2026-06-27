@@ -1,5 +1,11 @@
 # matrix-meetbot (POC)
 
+> ⚠️ **Unofficial personal proof-of-concept.** This is **not** an OpenDev project
+> or service and is **not affiliated with, endorsed by, or connected to** OpenDev,
+> OpenInfra, or `opendev.org`. It runs on a throwaway homeserver with **federation
+> disabled** — it cannot reach or affect any real OpenDev Matrix room or IRC channel.
+> It *ports* OpenDev's open-source `MeetBot` (BSD) purely as engineering attribution.
+
 A **Matrix-native meeting bot** that ports OpenDev's IRC `MeetBot` to Matrix,
 designed to run a **live proof-of-concept on a GitHub Actions runner**. It
 reuses OpenDev's battle-tested meeting **engine** (minute/log rendering) and adds

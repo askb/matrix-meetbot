@@ -49,7 +49,7 @@ def make_dispatcher(tmp_path):
         output_dir=str(tmp_path / "meetings"),
         state_dir=str(tmp_path / "state"),
         base_url="https://pages/",
-        meeting_name="opendev-meeting",
+        meeting_name="meetbot-poc",
     )
     os.makedirs(cfg.output_dir, exist_ok=True)
     os.makedirs(cfg.state_dir, exist_ok=True)

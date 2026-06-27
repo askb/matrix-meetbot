@@ -40,7 +40,7 @@ class Config:
     output_dir: str = "./meetings"
     base_url: str = ""  # becomes engine logUrlPrefix (absolute minute URLs)
     state_dir: str = "./state"
-    meeting_name: str = "opendev-meeting"  # default engine "channel" / path slug
+    meeting_name: str = "meetbot-poc"  # default engine "channel" / path slug
     info_url: str = "https://opendev.org/opendev/meetbot"
 
     @classmethod

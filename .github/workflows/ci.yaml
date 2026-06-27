@@ -74,7 +74,7 @@ jobs:
           MEETBOT_OUTPUT_DIR: ${{ github.workspace }}/meetings
           MEETBOT_STATE_DIR: ${{ github.workspace }}/state
           MEETBOT_BASE_URL: "https://meetings.example.org/"
-          MEETBOT_MEETING_NAME: opendev-meeting
+          MEETBOT_MEETING_NAME: meetbot-poc
         run: |
           export MEETBOT_ROOMS="$ROOM_ID"
           nohup python -u -m meetbot.main > bot.log 2>&1 &
@@ -92,7 +92,7 @@ jobs:
       - name: Assert minutes and logs were produced
         run: |
           set -euo pipefail
-          base="meetings/opendev-meeting"
+          base="meetings/meetbot-poc"
           echo "Produced files:"; find "$base" -type f | sort
           for ext in .html .txt .log.html .log.txt; do
             test -n "$(find "$base" -name "*$ext" -print -quit)" \
@@ -101,7 +101,7 @@ jobs:
           html=$(find "$base" -name "*.html" ! -name "*.log.html" | head -1)
           log=$(find "$base" -name "*.log.txt" | head -1)
           # Verbatim log keeps the #startmeeting name.
-          grep -q "Weekly OpenDev Sync" "$log" \
+          grep -q "Weekly Team Sync" "$log" \
             || { echo "log missing startmeeting name"; exit 1; }
           # Rendered minutes carry the meeting topic and items.
           for needle in "Weekly coordination" "ACTION" "AGREED" "bob to upgrade nodepool"; do

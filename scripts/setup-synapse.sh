@@ -30,11 +30,14 @@ docker run --rm \
 
 CONFIG="$DATA_DIR/homeserver.yaml"
 
-# Enable open registration + shared-secret registration for the throwaway server.
+# Registration: shared-secret registration (used by create-accounts.sh) always
+# works. Open self-service registration is OFF by default for privacy; set
+# SYNAPSE_OPEN_REGISTRATION=true only if you want anyone with the URL to sign up.
+OPEN_REG="${SYNAPSE_OPEN_REGISTRATION:-false}"
 {
   echo ""
-  echo "enable_registration: true"
-  echo "enable_registration_without_verification: true"
+  echo "enable_registration: ${OPEN_REG}"
+  echo "enable_registration_without_verification: ${OPEN_REG}"
   echo "registration_shared_secret: \"${SHARED_SECRET}\""
   echo "suppress_key_server_warning: true"
   echo "rc_message:"

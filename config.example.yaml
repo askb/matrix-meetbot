@@ -6,9 +6,9 @@ user_id: "@meetbot:example.org"            # MEETBOT_USER_ID
 access_token: "syt_xxx_long_lived_token"   # MEETBOT_ACCESS_TOKEN (secret!)
 device_id: "MEETBOT"                        # MEETBOT_DEVICE_ID
 rooms:                                       # MEETBOT_ROOMS (comma-separated)
-  - "#opendev-meeting:example.org"
+  - "#meetbot-poc:example.org"
 output_dir: "./meetings"                    # MEETBOT_OUTPUT_DIR (minutes/logs)
 base_url: ""                                # MEETBOT_BASE_URL (absolute minute URLs)
 state_dir: "./state"                        # MEETBOT_STATE_DIR (restart journals)
-meeting_name: "opendev-meeting"             # MEETBOT_MEETING_NAME (path slug)
+meeting_name: "meetbot-poc"             # MEETBOT_MEETING_NAME (path slug)
 info_url: "https://opendev.org/opendev/meetbot"

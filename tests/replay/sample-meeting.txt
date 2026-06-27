@@ -1,4 +1,4 @@
-#startmeeting Weekly OpenDev Sync
+#startmeeting Weekly Team Sync
 #meetingtopic Weekly coordination
 #chair bob
 #topic CI status

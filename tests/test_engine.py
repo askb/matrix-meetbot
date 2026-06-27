@@ -9,7 +9,7 @@ import pytest
 from meetbot.engine import meeting as engine
 
 
-def run_meeting(lines, outdir, name="opendev-meeting", owner="alice"):
+def run_meeting(lines, outdir, name="meetbot-poc", owner="alice"):
     replies = []
     meeting_obj = engine.Meeting(
         channel=name,

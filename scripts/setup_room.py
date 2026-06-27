@@ -9,7 +9,7 @@ Env:
   HS_URL          homeserver base URL (default http://localhost:8008)
   BOT_USER        bot localpart (default meetbot)
   BOT_PASS        bot password (default meetbot-pass)
-  ROOM_ALIAS      optional room alias localpart (default opendev-meeting)
+  ROOM_ALIAS      optional room alias localpart (default meetbot-poc)
   INVITE          comma-separated MXIDs to invite
 """
 
@@ -37,8 +37,8 @@ async def main() -> int:
         return 1
 
     create_kwargs = dict(
-        name="OpenDev Meeting (POC)",
-        topic="Matrix MeetBot POC room. Use #startmeeting <name>.",
+        name="MeetBot POC (unofficial — not an OpenDev service)",
+        topic="Personal MeetBot POC — not affiliated with OpenDev. Use #startmeeting <name>.",
         preset=RoomPreset.public_chat,
         invite=invite,
     )
