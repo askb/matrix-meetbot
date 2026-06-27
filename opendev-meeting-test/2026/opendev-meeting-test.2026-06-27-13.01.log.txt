@@ -1,7 +1,0 @@
-13:01:46 <alice> #startmeeting
-13:02:03 <alice> #topic Trying the bot
-13:02:24 <alice> #info hello world
-13:02:30 <alice> #action alice to verify minutes
-13:02:36 <alice> #agreed this works
-13:03:03 <alice> #info  hello world
-13:03:22 <alice> #endmeeting
