@@ -1,0 +1,11 @@
+# SPDX-License-Identifier: Apache-2.0
+# SPDX-FileCopyrightText: 2026 The Linux Foundation
+#
+# Prepare the gate node: ensure pip + Docker are available. Synapse runs as a
+# Docker container (see scripts/setup-synapse.sh), so we rely on the zuul-jobs
+# ensure-docker role rather than installing the homeserver on bare metal.
+---
+- hosts: all
+  roles:
+    - ensure-pip
+    - ensure-docker

@@ -1,0 +1,18 @@
+# SPDX-License-Identifier: Apache-2.0
+# SPDX-FileCopyrightText: 2026 The Linux Foundation
+#
+# Pipeline wiring. `openstack-tox-*` jobs come from openstack-zuul-jobs and run
+# the tox envs in contrib/opendev/tox.ini (unit tests + lint). The functional
+# job is defined in jobs.yaml.
+---
+- project:
+    check:
+      jobs:
+        - openstack-tox-pep8
+        - openstack-tox-py311
+        - meetbot-matrix-functional
+    gate:
+      jobs:
+        - openstack-tox-pep8
+        - openstack-tox-py311
+        - meetbot-matrix-functional

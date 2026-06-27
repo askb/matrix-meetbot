@@ -1,0 +1,5 @@
+# SPDX-License-Identifier: Apache-2.0
+# Binary dependencies for the functional gate job (bindep format).
+# Docker is provided by the zuul-jobs `ensure-docker` role, so nothing extra is
+# strictly required here. Listed for documentation / non-containerised runs.
+git

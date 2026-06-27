@@ -1,0 +1,25 @@
+# SPDX-License-Identifier: Apache-2.0
+# SPDX-FileCopyrightText: 2026 The Linux Foundation
+#
+# Collect artifacts to the Zuul build log (equivalent of upload-artifact in the
+# GHA workflow). Minutes/logs are then browsable from the Zuul build result.
+---
+- hosts: all
+  tasks:
+    - name: Collect meeting minutes
+      ansible.posix.synchronize:
+        src: "{{ zuul.project.src_dir }}/meetings"
+        dest: "{{ zuul.executor.log_root }}/meetings"
+        mode: pull
+      ignore_errors: true
+
+    - name: Collect bot log
+      ansible.posix.synchronize:
+        src: "{{ zuul.project.src_dir }}/bot.log"
+        dest: "{{ zuul.executor.log_root }}/bot.log"
+        mode: pull
+      ignore_errors: true
+
+    - name: Collect Synapse container log
+      ansible.builtin.shell: docker logs synapse > {{ zuul.executor.log_root | default('.') }}/synapse.log 2>&1 || true
+      ignore_errors: true

@@ -1,0 +1,27 @@
+# SPDX-License-Identifier: Apache-2.0
+# SPDX-FileCopyrightText: 2026 The Linux Foundation
+#
+# Zuul job definitions for the Matrix meetbot. On migration into OpenDev these
+# move to the repo root as `.zuul.yaml` (or a top-level `zuul.d/`). Kept under
+# contrib/opendev/ here because this POC repo gates on GitHub Actions.
+---
+- job:
+    name: meetbot-matrix-functional
+    description: |
+      Boot a disposable Synapse homeserver in a gate node, run the Matrix
+      meetbot against it, replay a scripted meeting and assert that
+      OpenDev-format minutes/logs are produced. This is the Zuul equivalent of
+      the "functional" job in .github/workflows/ci.yaml and realises the
+      Matrix infra-spec's goal of "dynamically spin up a Matrix server in a
+      gate test job".
+    nodeset: ubuntu-noble
+    pre-run: contrib/opendev/playbooks/functional/pre.yaml
+    run: contrib/opendev/playbooks/functional/run.yaml
+    post-run: contrib/opendev/playbooks/functional/post.yaml
+    timeout: 1800
+    files:
+      - ^meetbot/.*
+      - ^scripts/.*
+      - ^tests/.*
+      - ^requirements.txt$
+      - ^contrib/opendev/.*

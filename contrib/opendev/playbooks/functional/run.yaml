@@ -1,0 +1,12 @@
+# SPDX-License-Identifier: Apache-2.0
+# SPDX-FileCopyrightText: 2026 The Linux Foundation
+#
+# Run the functional test. All orchestration lives in run-functional.sh so the
+# same logic runs locally, in GitHub Actions, and in Zuul.
+---
+- hosts: all
+  tasks:
+    - name: Run Matrix meetbot functional test
+      ansible.builtin.command: bash contrib/opendev/run-functional.sh
+      args:
+        chdir: "{{ zuul.project.src_dir }}"
