@@ -1,0 +1,14 @@
+#startmeeting Weekly OpenDev Sync
+#meetingtopic Weekly coordination
+#chair bob
+#topic CI status
+CI looks green across the gate today
+#info gate queue is short this week
+#link https://zuul.opendev.org dashboard is healthy
+#idea we could parallelize the nodepool image builds
+#action bob to upgrade nodepool to latest
+#agreed proceed with the rollout on Thursday
+#topic Open discussion
+/me waves to everyone
+#help anyone able to review the docs change?
+#endmeeting

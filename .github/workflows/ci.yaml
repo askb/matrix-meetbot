@@ -1,0 +1,127 @@
+# SPDX-License-Identifier: BSD-3-Clause
+# Self-contained functional test: disposable Synapse + meetbot + scripted
+# replay client, all on the runner. No tunnel, no external accounts. Proves the
+# bot logs in over real Matrix, processes a meeting, and writes OpenDev-format
+# minutes/logs. Also runs the pure unit tests.
+---
+name: ci
+
+"on":
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  SYNAPSE_SERVER_NAME: meetbot.local
+  SYNAPSE_PORT: "8008"
+  SYNAPSE_SHARED_SECRET: ci-poc-shared-secret
+  HS_URL: http://localhost:8008
+  SERVER_NAME: meetbot.local
+
+jobs:
+  unit:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683  # v4.2.2
+      - uses: actions/setup-python@0b93645e9fea7318ecaed2b359559ac225c90a2b  # v5.3.0
+        with:
+          python-version: "3.11"
+      - name: Install deps
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt pytest
+      - name: Unit tests
+        run: python -m pytest tests/ -q
+
+  functional:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683  # v4.2.2
+      - uses: actions/setup-python@0b93645e9fea7318ecaed2b359559ac225c90a2b  # v5.3.0
+        with:
+          python-version: "3.11"
+
+      - name: Install deps
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Boot disposable Synapse
+        run: ./scripts/setup-synapse.sh
+
+      - name: Register accounts
+        run: ./scripts/create-accounts.sh meetbot alice bob
+
+      - name: Create room and bot token
+        run: |
+          eval "$(BOT_USER=meetbot BOT_PASS=meetbot-pass python scripts/setup_room.py)"
+          {
+            echo "MEETBOT_USER_ID=$MEETBOT_USER_ID"
+            echo "MEETBOT_DEVICE_ID=$MEETBOT_DEVICE_ID"
+            echo "MEETBOT_ACCESS_TOKEN=$MEETBOT_ACCESS_TOKEN"
+            echo "ROOM_ID=$ROOM_ID"
+          } >> "$GITHUB_ENV"
+
+      - name: Start meetbot
+        env:
+          MEETBOT_HOMESERVER: http://localhost:8008
+          MEETBOT_OUTPUT_DIR: ${{ github.workspace }}/meetings
+          MEETBOT_STATE_DIR: ${{ github.workspace }}/state
+          MEETBOT_BASE_URL: "https://meetings.example.org/"
+          MEETBOT_MEETING_NAME: opendev-meeting
+        run: |
+          export MEETBOT_ROOMS="$ROOM_ID"
+          nohup python -u -m meetbot.main > bot.log 2>&1 &
+          echo "BOT_PID=$!" >> "$GITHUB_ENV"
+          sleep 8
+          echo "--- bot.log ---"; cat bot.log || true
+
+      - name: Replay scripted meeting
+        env:
+          DRIVER_USER: alice
+          DRIVER_PASS: alice-pass
+          TRANSCRIPT: ${{ github.workspace }}/tests/replay/sample-meeting.txt
+        run: python scripts/replay_client.py
+
+      - name: Assert minutes and logs were produced
+        run: |
+          set -euo pipefail
+          base="meetings/opendev-meeting"
+          echo "Produced files:"; find "$base" -type f | sort
+          for ext in .html .txt .log.html .log.txt; do
+            test -n "$(find "$base" -name "*$ext" -print -quit)" \
+              || { echo "MISSING $ext"; exit 1; }
+          done
+          html=$(find "$base" -name "*.html" ! -name "*.log.html" | head -1)
+          log=$(find "$base" -name "*.log.txt" | head -1)
+          # Verbatim log keeps the #startmeeting name.
+          grep -q "Weekly OpenDev Sync" "$log" \
+            || { echo "log missing startmeeting name"; exit 1; }
+          # Rendered minutes carry the meeting topic and items.
+          for needle in "Weekly coordination" "ACTION" "AGREED" "bob to upgrade nodepool"; do
+            grep -qi "$needle" "$html" \
+              || { echo "minutes missing: $needle"; exit 1; }
+          done
+          echo "All assertions passed."
+
+      - name: Stop meetbot
+        if: always()
+        run: kill "${BOT_PID:-0}" 2>/dev/null || true
+
+      - name: Upload minutes artifact
+        if: always()
+        uses: actions/upload-artifact@b4b15b8c7c6ac21ea08fcf65892d2ee8f75cf882  # v4.4.3
+        with:
+          name: meeting-minutes
+          path: meetings/
+          if-no-files-found: warn
+
+      - name: Synapse logs on failure
+        if: failure()
+        run: docker logs synapse 2>&1 | tail -60 || true

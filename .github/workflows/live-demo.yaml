@@ -1,0 +1,169 @@
+# SPDX-License-Identifier: BSD-3-Clause
+# Live interactive demo: boots a disposable Synapse on the runner and exposes it
+# with a cloudflared public HTTPS tunnel so you and the OpenDev team can log in
+# with Element and run a real meeting against the bot. Everything is destroyed
+# when the job ends. Trigger from the Actions tab (workflow_dispatch).
+---
+name: live-demo
+
+"on":
+  workflow_dispatch:
+    inputs:
+      meeting_name:
+        description: "Meeting/path slug used for minutes"
+        type: string
+        default: opendev-meeting
+      duration_minutes:
+        description: "How long to keep the demo alive (max ~350)"
+        type: string
+        default: "50"
+      demo_users:
+        description: "Space-separated demo accounts to pre-create"
+        type: string
+        default: "alice bob"
+
+permissions:
+  contents: read
+
+env:
+  SYNAPSE_PORT: "8008"
+  SYNAPSE_SHARED_SECRET: live-poc-shared-secret
+  HS_URL: http://localhost:8008
+
+jobs:
+  demo:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 360
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683  # v4.2.2
+      - uses: actions/setup-python@0b93645e9fea7318ecaed2b359559ac225c90a2b  # v5.3.0
+        with:
+          python-version: "3.11"
+
+      - name: Install deps
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Install cloudflared
+        run: |
+          curl -fsSL -o cloudflared \
+            https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64
+          chmod +x cloudflared
+          sudo mv cloudflared /usr/local/bin/cloudflared
+          cloudflared --version
+
+      - name: Start cloudflared tunnel
+        run: |
+          set -euo pipefail
+          nohup cloudflared tunnel --no-autoupdate \
+            --url http://localhost:8008 > cloudflared.log 2>&1 &
+          echo "CF_PID=$!" >> "$GITHUB_ENV"
+          echo -n "Waiting for tunnel URL"
+          url=""
+          for _ in $(seq 1 30); do
+            url=$(grep -oE 'https://[a-z0-9-]+\.trycloudflare\.com' cloudflared.log \
+              | head -1 || true)
+            [ -n "$url" ] && break
+            echo -n "."; sleep 2
+          done
+          echo
+          test -n "$url" || { echo "no tunnel URL"; cat cloudflared.log; exit 1; }
+          host="${url#https://}"
+          {
+            echo "TUNNEL_URL=$url"
+            echo "SERVER_NAME=$host"
+            echo "SYNAPSE_SERVER_NAME=$host"
+            echo "SYNAPSE_PUBLIC_BASEURL=$url/"
+          } >> "$GITHUB_ENV"
+          echo "Tunnel: $url  (server_name=$host)"
+
+      - name: Boot disposable Synapse
+        run: ./scripts/setup-synapse.sh
+
+      - name: Register accounts
+        run: ./scripts/create-accounts.sh meetbot ${{ inputs.demo_users }}
+
+      - name: Create meeting room and bot token
+        run: |
+          eval "$(BOT_USER=meetbot BOT_PASS=meetbot-pass \
+            ROOM_ALIAS=${{ inputs.meeting_name }} python scripts/setup_room.py)"
+          {
+            echo "MEETBOT_USER_ID=$MEETBOT_USER_ID"
+            echo "MEETBOT_DEVICE_ID=$MEETBOT_DEVICE_ID"
+            echo "MEETBOT_ACCESS_TOKEN=$MEETBOT_ACCESS_TOKEN"
+            echo "ROOM_ID=$ROOM_ID"
+          } >> "$GITHUB_ENV"
+
+      - name: Start meetbot
+        env:
+          MEETBOT_HOMESERVER: http://localhost:8008
+          MEETBOT_OUTPUT_DIR: ${{ github.workspace }}/meetings
+          MEETBOT_STATE_DIR: ${{ github.workspace }}/state
+          MEETBOT_MEETING_NAME: ${{ inputs.meeting_name }}
+        run: |
+          export MEETBOT_ROOMS="$ROOM_ID"
+          nohup python -u -m meetbot.main > bot.log 2>&1 &
+          echo "BOT_PID=$!" >> "$GITHUB_ENV"
+          sleep 6
+          echo "--- bot.log ---"; cat bot.log || true
+
+      - name: Print join instructions
+        run: |
+          {
+            echo "## Matrix MeetBot — live demo is up"
+            echo ""
+            echo "**Homeserver (paste into Element):** \`$TUNNEL_URL\`"
+            echo ""
+            echo "### How to join"
+            echo "1. Open <https://app.element.io>"
+            echo "2. Click **Sign in** -> **Edit** (homeserver) and enter:"
+            echo "   \`$TUNNEL_URL\`"
+            echo "3. **Create account** (open registration) or sign in as a demo user:"
+            for u in ${{ inputs.demo_users }}; do
+              echo "   - \`@$u:$SERVER_NAME\` / password \`$u-pass\`"
+            done
+            echo "4. Join the room: \`#${{ inputs.meeting_name }}:$SERVER_NAME\`"
+            echo "   (or invite the bot \`$MEETBOT_USER_ID\` to your own room)"
+            echo ""
+            echo "### Drive the meeting"
+            echo "\`\`\`"
+            echo "#startmeeting Demo Meeting"
+            echo "#topic First topic"
+            echo "#info some information"
+            echo "#action @$( echo '${{ inputs.demo_users }}' | awk '{print $1}'):$SERVER_NAME to do a thing"
+            echo "#agreed we agree"
+            echo "#endmeeting"
+            echo "\`\`\`"
+            echo ""
+            echo "On \`#endmeeting\` the bot posts minute links and the files are"
+            echo "uploaded as a workflow artifact. This server is destroyed when the"
+            echo "job ends (after ${{ inputs.duration_minutes }} min)."
+          } >> "$GITHUB_STEP_SUMMARY"
+          echo "Tunnel URL: $TUNNEL_URL"
+
+      - name: Keep demo alive
+        run: |
+          mins=${{ inputs.duration_minutes }}
+          echo "Demo running for ${mins} minutes ..."
+          for i in $(seq 1 "$mins"); do
+            sleep 60
+            if [ $((i % 5)) -eq 0 ]; then
+              echo "[$i/${mins} min] recent bot activity:"; tail -n 3 bot.log || true
+            fi
+          done
+
+      - name: Upload minutes artifact
+        if: always()
+        uses: actions/upload-artifact@b4b15b8c7c6ac21ea08fcf65892d2ee8f75cf882  # v4.4.3
+        with:
+          name: live-demo-minutes
+          path: meetings/
+          if-no-files-found: warn
+
+      - name: Teardown
+        if: always()
+        run: |
+          kill "${BOT_PID:-0}" 2>/dev/null || true
+          kill "${CF_PID:-0}" 2>/dev/null || true
+          docker rm -f synapse 2>/dev/null || true

@@ -1,0 +1,4 @@
+# SPDX-License-Identifier: BSD-3-Clause
+# Matrix client transport. No E2EE extras: meeting rooms are public/unencrypted.
+matrix-nio>=0.24,<0.26
+PyYAML>=6.0
